@@ -30,21 +30,28 @@ struct {
 /********************************************************************************************/
 
 void P0_Reader_Init() {
+    AddLog(LOG_LEVEL_INFO, PSTR("P0: TX %d, Rx %d"), Pin(GPIO_P0READER_TX), Pin(GPIO_P0READER_RX));
+
   if (PinUsed(GPIO_P0READER_RX) && PinUsed(GPIO_P0READER_TX)) {
-    P0_Reader_Serial = new TasmotaSerial(Pin(GPIO_P0READER_RX), Pin(GPIO_P0READER_TX), 1, 0, 256);
+    AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 0"));
+    P0_Reader_Serial = new TasmotaSerial(Pin(GPIO_P0READER_RX), Pin(GPIO_P0READER_TX), 1);
     if (P0_Reader_Serial->begin(P0_READER_BAUDRATE, SERIAL_7E1)) {
+      AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 1"));
       if (P0_Reader_Serial->hardwareSerial()) {
+        AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 2"));
         SetSerial(P0_READER_BAUDRATE, TS_SERIAL_7E1);
         ClaimSerial();
       }
     }
   }
 
-  AddLog(LOG_LEVEL_INFO, PSTR("P0: Init"));
+  AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 3"));
 }
 
 void P0_Reader_Read(){
     if (!P0_Reader_Serial) { return; }
+
+    // AddLog(LOG_LEVEL_INFO, PSTR("P0: P0_Reader_Read"));
 
     // Waiting for full message or timeout
     if(P0.status & P0_HAS_SENT){
@@ -56,7 +63,7 @@ void P0_Reader_Read(){
             P0.timeout_count = P0_TIMEOUT_COUNT;
             P0_Reader_Serial->read(P0.rx_buf, P0_RX_BUF_SIZE);
 
-            AddLog(LOG_LEVEL_INFO, PSTR("P0: Full message recieved"));
+            // AddLog(LOG_LEVEL_INFO, PSTR("P0: Full message recieved"));
 
             //TODO parse msg
 
@@ -82,6 +89,7 @@ void P0_Reader_Read(){
         }
 
         P0.period_count = P0_READER_PERIOD;
+        P0.timeout_count = P0_TIMEOUT_COUNT;
         P0.status |= P0_HAS_SENT;
 
     }else{
