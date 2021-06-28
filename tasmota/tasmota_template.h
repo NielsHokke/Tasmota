@@ -169,6 +169,7 @@ enum UserSelectablePins {
   GPIO_I2S_OUT_DATA, GPIO_I2S_OUT_CLK, GPIO_I2S_OUT_SLCT,
   GPIO_I2S_IN_DATA,  GPIO_I2S_IN_CLK,  GPIO_I2S_IN_SLCT,
   GPIO_INTERRUPT,
+  GPIO_P0READER_TX, GPIO_P0READER_RX,
   GPIO_SENSOR_END };
 
 enum ProgramSelectablePins {
@@ -282,6 +283,7 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_GPS_RX "|" D_SENSOR_GPS_TX "|"
   D_SENSOR_HM10_RX "|" D_SENSOR_HM10_TX "|"
   D_SENSOR_LE01MR_RX "|" D_SENSOR_LE01MR_TX "|"
+  D_SENSOR_P0READER_RX "|" D_SENSOR_P0READER_TX "|"
   D_SENSOR_CC1101_GDO0 "|" D_SENSOR_CC1101_GDO2 "|"
   D_SENSOR_HRXL_RX "|"
   D_SENSOR_ELECTRIQ_MOODL "|"
@@ -784,6 +786,11 @@ const uint16_t kGpioNiceList[] PROGMEM = {
   AGPIO(GPIO_AS608_TX),
   AGPIO(GPIO_AS608_RX),
 #endif
+#ifdef USE_P0_READER
+  AGPIO(GPIO_P0READER_TX),
+  AGPIO(GPIO_P0READER_RX),
+#endif
+
 
 /*-------------------------------------------------------------------------------------------*\
  * Other sensors

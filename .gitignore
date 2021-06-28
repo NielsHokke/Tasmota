@@ -36,3 +36,15 @@ platformio_tasmota_cenv.ini
 .vscode/launch.json
 *.bak
 *.code-workspace
+
+
+## TEMP #######
+/lib/libesp32_lvgl/lv_lib_freetype/arial.ttf
+/tasmota/language/af_AF.h
+/tasmota/lvgl_berry/fonts/DSEG7/DSEG-LICENSE.txt
+/tools/Esptool/ESP32/bootloader_dout_40m.bin
+/tools/Esptool/Odroid_go_and_core2/bootloader_qio_80m.bin
+/tools/fw_HM10_cc2541/CC2541hm10v709.bin
+/tools/fw_Zigbee_cc2530/CC2530_CC2591_ZNP-Prod_20190608.bin
+/tools/fw_Zigbee_cc2530/CC2530_CC2592_ZNP-Prod_20190608.bin
+/tools/fw_Zigbee_cc2530/CC2530_ZNP-Prod_20190608.bin
