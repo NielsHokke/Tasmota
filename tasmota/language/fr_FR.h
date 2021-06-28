@@ -831,6 +831,8 @@
 #define D_SENSOR_ZEROCROSS     "ZC Pulse"
 #define D_SENSOR_HALLEFFECT    "HallEffect"
 #define D_SENSOR_EPD_DATA      "EPD Data"
+#define D_SENSOR_P0READER_RX   "P0 Rx"
+#define D_SENSOR_P0READER_TX   "P0 Tx"
 
 // Units
 #define D_UNIT_AMPERE "A"
