@@ -4,10 +4,9 @@
 // Define driver ID
 #define XSNS_88  88
 
-#define P0_READER_PERIOD     20         // In 100ms loops
+#define P0_READER_PERIOD     50         // In 100ms loops
 
 #define P0_READER_BAUDRATE   300
-#define P0_TIMEOUT_COUNT     10         // In 100ms loops
 #define P0_RX_BUF_SIZE       230
 #define P0_HAS_SENT          0x01
 
@@ -30,15 +29,17 @@ struct {
 /********************************************************************************************/
 
 void P0_Reader_Init() {
-    AddLog(LOG_LEVEL_INFO, PSTR("P0: TX %d, Rx %d"), Pin(GPIO_P0READER_TX), Pin(GPIO_P0READER_RX));
-
+  // Check if pins are set by user
   if (PinUsed(GPIO_P0READER_RX) && PinUsed(GPIO_P0READER_TX)) {
-    AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 0"));
+
+    // Create serial handle
     P0_Reader_Serial = new TasmotaSerial(Pin(GPIO_P0READER_RX), Pin(GPIO_P0READER_TX), 1);
+
+    // Set baudrate and serial mode
     if (P0_Reader_Serial->begin(P0_READER_BAUDRATE, SERIAL_7E1)) {
-      AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 1"));
+
+      // Check if hardware serial possible
       if (P0_Reader_Serial->hardwareSerial()) {
-        AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 2"));
         SetSerial(P0_READER_BAUDRATE, TS_SERIAL_7E1);
         ClaimSerial();
       }
@@ -48,33 +49,25 @@ void P0_Reader_Init() {
   AddLog(LOG_LEVEL_INFO, PSTR("P0: Init 3"));
 }
 
-void P0_Reader_Read(){
+void P0_Reader_Tick(){
+    // Check if serial setup
     if (!P0_Reader_Serial) { return; }
-
-    // AddLog(LOG_LEVEL_INFO, PSTR("P0: P0_Reader_Read"));
 
     // Waiting for full message or timeout
     if(P0.status & P0_HAS_SENT){
 
         // Full message recieved
         if(P0_Reader_Serial->available() >= 228){
+            // Reset flags and counter
             P0.status &= ~P0_HAS_SENT;
 
-            P0.timeout_count = P0_TIMEOUT_COUNT;
             P0_Reader_Serial->read(P0.rx_buf, P0_RX_BUF_SIZE);
 
-            // AddLog(LOG_LEVEL_INFO, PSTR("P0: Full message recieved"));
+            AddLog(LOG_LEVEL_INFO, PSTR("P0: Full message recieved"));
 
             //TODO parse msg
-
-        // Timeout
-        }else if(P0.timeout_count <= 0){
-            P0_Reader_Serial->flush();
-            P0.status &= ~P0_HAS_SENT;
-
-            AddLog(LOG_LEVEL_INFO, PSTR("P0: Timeout"));
         
-        // No full message, no timeout
+        // No full message
         }else{
             P0.timeout_count--;
         }
@@ -84,12 +77,14 @@ void P0_Reader_Read(){
     if(P0.period_count <= 0){
         AddLog(LOG_LEVEL_INFO, PSTR("P0: Transmitting"));
 
+        P0_Reader_Serial->flush();
+
+        // Transmit requist message
         for(uint32_t i=0;i<P0_REQUEST_MSG_SIZE;i++){
             P0_Reader_Serial->write(P0.request_msg[i]);
         }
 
         P0.period_count = P0_READER_PERIOD;
-        P0.timeout_count = P0_TIMEOUT_COUNT;
         P0.status |= P0_HAS_SENT;
 
     }else{
@@ -118,7 +113,7 @@ bool Xsns88(byte function) {
       P0_Reader_Init();
       break;
     case FUNC_EVERY_100_MSECOND:
-      P0_Reader_Read();
+      P0_Reader_Tick();
       break;
 #ifdef USE_WEBSERVER
     case FUNC_WEB_SENSOR:
