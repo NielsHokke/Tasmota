@@ -98,8 +98,27 @@ void P0_Reader_Init() {
 
 void P0_Parse_Line(){
 
-  AddLog(LOG_LEVEL_INFO, PSTR("P0: P0_Parse_Line"));
+  //Lines will look like:
+
+  // /ISK5ME162-0012<\r><\n>
+  // <2>C.1.0(00000000)<\r><\n>
+  // 0.0.0(00000000)<\r><\n>
+  // 1.8.0(0000000.000*kWh)<\r><\n>
+  // 1.8.1(0000000.000*kWh)<\r><\n>
+  // 1.8.2(0000000.000*kWh)<\r><\n>
+  // 2.8.0(0000000.000*kWh)<\r><\n>
+  // 2.8.1(0000000.000*kWh)<\r><\n>
+  // 2.8.2(0000000.000*kWh)<\r><\n>
+  // F.F(0000000)<\r><\n>
+  // !<\r><\n>
+  // <3>K
+
+  // AddLog(LOG_LEVEL_INFO, PSTR("P0: P0_Parse_Line"));
   // AddLogBuffer(LOG_LEVEL_INFO, (uint8_t*) P0.rx_buf, P0.byte_counter);
+
+  // String date = GetBuildDateAndTime();
+  // AddLog(LOG_LEVEL_INFO, PSTR("P0: P0_Parse_Line %s"), date.c_str());
+
 
   // Init OBIS_Code and value fields
   char *c_OBIS_Code = P0.rx_buf;
@@ -134,14 +153,14 @@ void P0_Parse_Line(){
     }
   }
 
-  AddLog(LOG_LEVEL_INFO, PSTR("P0: OBIS %d"), (uint8_t) OBIS_Code);
-
+  // AddLog(LOG_LEVEL_INFO, PSTR("P0: OBIS %d"), (uint8_t) OBIS_Code);
 
   // First line is meter name without OBIS code
   if(P0.line_count == 0 && OBIS_Code == OBIS_LAST){
-      memcpy(P0_Data.Meter_Name, c_value, value_len);
-      P0_Data.has_data = 1;
-      return;
+    memcpy(P0_Data.Meter_Name, c_value, value_len);
+    P0_Data.has_data = 1;
+    Energy.data_valid[0] = 0;
+    return;
   }
 
   // Parse value, if in kWh parse to Wh 
@@ -223,7 +242,7 @@ void P0_Reader_Tick(){
   // Transmit
   if(P0.period_count <= 0){
 
-      AddLog(LOG_LEVEL_INFO, PSTR("P0: New period"));
+      // AddLog(LOG_LEVEL_INFO, PSTR("P0: New period"));
 
       P0.serial_handle->flush();
 
@@ -246,34 +265,102 @@ void P0_Reader_Tick(){
 #ifdef USE_WEBSERVER
 
 // TODO move to language files
-const char HTTP_Meter_ID[] PROGMEM = "{s}Meter ID:  {m}%s{e}";
-// const char HTTP_Serial_Num[] PROGMEM = "{s}Serial number{m}%d{e}";
-// const char HTTP_Device_Adrs[] PROGMEM = "{s}Device adress{m}%d{e}";
-const char HTTP_Total_Pos_Energy[] PROGMEM = "{s}Total positive energy:{m}%d.%03d kWh{e}";
-const char HTTP_T1_Pos_Energy[] PROGMEM = "{s}Positive energy tariff 1:{m}%d.%03d kWh{e}";
-const char HTTP_T2_Pos_Energy[] PROGMEM = "{s}Positive energy tariff 2:{m}%d.%03d kWh{e}";
-const char HTTP_Total_Neg_Energy[] PROGMEM = "{s}Total negative energy:{m}%d.%03d kWh{e}";
-const char HTTP_T1_Neg_Energy[] PROGMEM = "{s}Negative energy tariff 1:{m}%d.%03d kWh{e}";
-const char HTTP_T2_Neg_Energy[] PROGMEM = "{s}Negative energy tariff 2:{m}%d.%03d kWh{e}";
-const char HTTP_Fatel_Error[] PROGMEM = "{s}Fatal error:{m}%d{e}";
+const char HTTP_Empy_Line[]            PROGMEM = "{s}&nbsp;{m}&nbsp;{e}";
+const char HTTP_Meter_ID[]            PROGMEM = "{s}Meter ID:  {m}%s{e}";
+// const char HTTP_Serial_Num[]          PROGMEM = "{s}Serial number{m}%d{e}";
+// const char HTTP_Device_Adrs[]         PROGMEM = "{s}Device adress{m}%d{e}";
 
+const char HTTP_Total_Pos_Energy[]    PROGMEM = "{s}Total consumption:{m}%d.%03d kWh{e}";
+const char HTTP_T1_Pos_Energy[]       PROGMEM = "{s}Consumption tariff 1:{m}%d.%03d kWh{e}";
+const char HTTP_T2_Pos_Energy[]       PROGMEM = "{s}Consumption tariff 2:{m}%d.%03d kWh{e}";
+const char HTTP_Total_Neg_Energy[]    PROGMEM = "{s}Total production:{m}%d.%03d kWh{e}";
+const char HTTP_T1_Neg_Energy[]       PROGMEM = "{s}Production tariff 1:{m}%d.%03d kWh{e}";
+const char HTTP_T2_Neg_Energy[]       PROGMEM = "{s}Production tariff 2:{m}%d.%03d kWh{e}";
 
-void P0_Reader_Show(void) {
-  if (!P0.serial_handle) { return; }
+// const char HTTP_Daily_Title[]         PROGMEM = "{s}Daily{m}";
+// const char HTTP_Total_Pos_Today[]     PROGMEM = "{s}Total today:{m}%d.%03d kWh{e}";
+// const char HTTP_T1_Pos_Today[]        PROGMEM = "{s}Tariff 1 today:{m}%d.%03d kWh{e}";
+// const char HTTP_T2_Pos_Today[]        PROGMEM = "{s}Tariff 2 today:{m}%d.%03d kWh{e}";
+// const char HTTP_Total_Pos_Yesterday[] PROGMEM = "{s}Total yesterday:{m}%d.%03d kWh{e}";
+// const char HTTP_T1_Pos_Yesterday[]    PROGMEM = "{s}Tariff 1 yesterday:{m}%d.%03d kWh{e}";
+// const char HTTP_T2_Pos_Yesterday[]    PROGMEM = "{s}Tariff 2 yesterday:{m}%d.%03d kWh{e}";
 
-  if(P0_Data.has_data) WSContentSend_PD(HTTP_Meter_ID, P0_Data.Meter_Name);
-  // if(P0_Data.Serial_Number) WSContentSend_PD(HTTP_Serial_Num, P0_Data.Serial_Number);
-  // if(P0_Data.Device_Adress) WSContentSend_PD(HTTP_Device_Adrs, P0_Data.Device_Adress);
-  if(P0_Data.Total_Pos_Energy) WSContentSend_PD(HTTP_Total_Pos_Energy, P0_Data.Total_Pos_Energy/1000, P0_Data.Total_Pos_Energy%1000);
-  if(P0_Data.T1_Pos_Energy) WSContentSend_PD(HTTP_T1_Pos_Energy, P0_Data.T1_Pos_Energy/1000, P0_Data.T1_Pos_Energy%1000);
-  if(P0_Data.T2_Pos_Energy) WSContentSend_PD(HTTP_T2_Pos_Energy, P0_Data.T2_Pos_Energy/1000, P0_Data.T2_Pos_Energy%1000);
-  if(P0_Data.Total_Neg_Energy) WSContentSend_PD(HTTP_Total_Neg_Energy, P0_Data.Total_Neg_Energy/1000, P0_Data.Total_Neg_Energy%1000);
-  if(P0_Data.T1_Neg_Energy) WSContentSend_PD(HTTP_T1_Neg_Energy, P0_Data.T1_Neg_Energy/1000, P0_Data.T1_Neg_Energy%1000);
-  if(P0_Data.T2_Neg_Energy) WSContentSend_PD(HTTP_T2_Neg_Energy, P0_Data.T2_Neg_Energy/1000, P0_Data.T2_Neg_Energy%1000);
-  if(P0_Data.Fatal_Error) WSContentSend_PD(HTTP_Fatel_Error, P0_Data.Fatal_Error);
+// const char HTTP_Montly_Title[]        PROGMEM = "{s}Monthly{m}";
+// const char HTTP_Total_Pos_Month[]     PROGMEM = "{s}Total this month:{m}%d.%03d kWh{e}";
+// const char HTTP_T1_Pos_Month[]        PROGMEM = "{s}Tariff 1 this month:{m}%d.%03d kWh{e}";
+// const char HTTP_T2_Pos_Month[]        PROGMEM = "{s}Tariff 2 this month:{m}%d.%03d kWh{e}";
+// const char HTTP_Total_Pos_PrevMonth[] PROGMEM = "{s}Total prev month:{m}%d.%03d kWh{e}";
+// const char HTTP_T1_Pos_PrevMonth[]    PROGMEM = "{s}Tariff 1 prev month:{m}%d.%03d kWh{e}";
+// const char HTTP_T2_Pos_PrevMonth[]    PROGMEM = "{s}Tariff 2 prev month:{m}%d.%03d kWh{e}";
 
-}
+const char HTTP_Fatel_Error[]         PROGMEM = "{s}Fatal error:{m}%d{e}";
+
 #endif  // USE_WEBSERVER
+
+void P0_Reader_Show(bool json) {
+  if (!P0.serial_handle || !P0_Data.has_data)  return;
+
+  if(json){
+    //Append all P0Reader data to Json string
+    ResponseAppend_P(PSTR(",\"P0Reader\":{\"MID\":\"%s\",\"TC\":%d,\"CT1\":%d,\"CT2\":%d,\"TP\":%d,\"PT1\":%d,\"PT2\":%d}"),
+                     P0_Data.Meter_Name,
+                     P0_Data.Total_Pos_Energy,
+                     P0_Data.T1_Pos_Energy,
+                     P0_Data.T2_Pos_Energy,
+                     P0_Data.Total_Neg_Energy,
+                     P0_Data.T1_Neg_Energy,
+                     P0_Data.T2_Neg_Energy);
+  }else{
+
+#ifdef USE_WEBSERVER
+
+    // Print all P0Reader data to web interface
+    WSContentSend_PD(HTTP_Meter_ID, P0_Data.Meter_Name);
+
+    // if(P0_Data.Serial_Number) WSContentSend_PD(HTTP_Serial_Num, P0_Data.Serial_Number);
+    // if(P0_Data.Device_Adress) WSContentSend_PD(HTTP_Device_Adrs, P0_Data.Device_Adress);
+    WSContentSend_PD(HTTP_Empy_Line);
+    WSContentSend_PD(HTTP_Total_Pos_Energy, P0_Data.Total_Pos_Energy/1000, P0_Data.Total_Pos_Energy%1000);
+    WSContentSend_PD(HTTP_T1_Pos_Energy, P0_Data.T1_Pos_Energy/1000, P0_Data.T1_Pos_Energy%1000);
+    WSContentSend_PD(HTTP_T2_Pos_Energy, P0_Data.T2_Pos_Energy/1000, P0_Data.T2_Pos_Energy%1000);
+    
+    // Only show negative envery when larger then threshold
+    if(P0_Data.Total_Neg_Energy > 500) WSContentSend_PD(HTTP_Total_Neg_Energy, P0_Data.Total_Neg_Energy/1000, P0_Data.Total_Neg_Energy%1000);
+    if(P0_Data.T1_Neg_Energy > 500) WSContentSend_PD(HTTP_T1_Neg_Energy, P0_Data.T1_Neg_Energy/1000, P0_Data.T1_Neg_Energy%1000);
+    if(P0_Data.T2_Neg_Energy > 500) WSContentSend_PD(HTTP_T2_Neg_Energy, P0_Data.T2_Neg_Energy/1000, P0_Data.T2_Neg_Energy%1000);
+
+    // long Total_Pos_Today = P0_Data.Total_Pos_Energy - P0_His.Total_Pos_Today_Stamp;
+    // long T1_Pos_Today = P0_Data.T1_Pos_Energy - P0_His.T1_Pos_Today_Stamp;
+    // long T2_Pos_Today = P0_Data.T2_Pos_Energy - P0_His.T2_Pos_Today_Stamp;
+
+    // long Total_Pos_Month = P0_Data.Total_Pos_Energy - P0_His.Total_Pos_Month_Stamp;
+    // long T1_Pos_Month = P0_Data.T1_Pos_Energy - P0_His.T1_Pos_Month_Stamp;
+    // long T2_Pos_Month = P0_Data.T2_Pos_Energy - P0_His.T2_Pos_Month_Stamp;
+
+    // WSContentSend_PD(HTTP_Empy_Line);
+    // WSContentSend_PD(HTTP_Daily_Title);
+    // WSContentSend_PD(HTTP_Total_Pos_Today, Total_Pos_Today/1000, Total_Pos_Today%1000);
+    // WSContentSend_PD(HTTP_T1_Pos_Today, T1_Pos_Today/1000, T1_Pos_Today%1000);
+    // WSContentSend_PD(HTTP_T2_Pos_Today, T2_Pos_Today/1000, T2_Pos_Today%1000);
+    // WSContentSend_PD(HTTP_Total_Pos_Yesterday, P0_His.Total_Pos_Yesterday/1000, P0_His.Total_Pos_Yesterday%1000);
+    // WSContentSend_PD(HTTP_T1_Pos_Yesterday, P0_His.T1_Pos_Yesterday/1000, P0_His.T1_Pos_Yesterday%1000);
+    // WSContentSend_PD(HTTP_T2_Pos_Yesterday, P0_His.T2_Pos_Yesterday/1000, P0_His.T2_Pos_Yesterday%1000);
+
+    // WSContentSend_PD(HTTP_Empy_Line);
+    // WSContentSend_PD(HTTP_Montly_Title);
+    // WSContentSend_PD(HTTP_Total_Pos_Month, Total_Pos_Month/1000, Total_Pos_Month%1000);
+    // WSContentSend_PD(HTTP_T1_Pos_Month, T1_Pos_Month/1000, T1_Pos_Month%1000);
+    // WSContentSend_PD(HTTP_T2_Pos_Month, T2_Pos_Month/1000, T2_Pos_Month%1000);
+    // WSContentSend_PD(HTTP_Total_Pos_PrevMonth, P0_His.Total_Pos_PrevMonth/1000, P0_His.Total_Pos_PrevMonth%1000);
+    // WSContentSend_PD(HTTP_T1_Pos_PrevMonth, P0_His.T1_Pos_PrevMonth/1000, P0_His.T1_Pos_PrevMonth%1000);
+    // WSContentSend_PD(HTTP_T2_Pos_PrevMonth, P0_His.T2_Pos_PrevMonth/1000, P0_His.T2_Pos_PrevMonth%1000);
+
+    // Display Error
+    if(P0_Data.Fatal_Error) WSContentSend_PD(HTTP_Fatel_Error, P0_Data.Fatal_Error);
+    
+#endif  // USE_WEBSERVER
+  }
+}
 
 /*********************************************************************************************\
  * Interface
@@ -291,9 +378,13 @@ bool Xsns88(byte function) {
       break;
 #ifdef USE_WEBSERVER
     case FUNC_WEB_SENSOR:
-      P0_Reader_Show();
+      P0_Reader_Show(0);
       break;
 #endif  // USE_WEBSERVER
+    case FUNC_JSON_APPEND:
+      P0_Reader_Show(1);
+    break;
+
   }
   return result;
 }
